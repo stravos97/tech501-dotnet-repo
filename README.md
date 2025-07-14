@@ -174,6 +174,27 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" http://localhost:5125/api/Sparta
 
 > **Important**: Replace `YOUR_TOKEN_HERE` with the actual token you received!
 
+### Pretty Printing JSON Responses
+
+For better readability, you can pipe curl output through `jq` to format JSON responses:
+
+```bash
+# Install jq (if not already installed)
+brew install jq  # macOS
+# or
+sudo apt-get install jq  # Linux
+
+# Pretty print JSON responses
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans | jq '.'
+
+# Example with a real token
+curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoic3BhcnRhIiwiZXhwIjoxNzUyNTExODEyLCJpc3MiOiJZb3VySXNzdWVyIiwiYXVkIjoiWW91cklzc3VlciJ9.YM_CGy4_GG_LtoeYDyAkP-McHa8Z5LoJg0mQ6Di3-YQ" \
+  http://localhost:5125/api/Spartans | jq '.'
+```
+
+This will format the JSON output with proper indentation and colors, making it much easier to read.
+
 ## API Endpoints
 
 ### Request Flow Overview
@@ -197,6 +218,10 @@ GET requests are used to **retrieve** information. Think of them as "asking for"
 # Request
 curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   http://localhost:5125/api/Spartans
+
+# Request with pretty printing (recommended)
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans | jq '.'
 
 # Response
 [
@@ -582,10 +607,14 @@ dotnet run
    - Pre-installed on most systems
    - Great for automation and scripting
 
-3. **JSON Formatter**: Validate and format JSON
+3. **jq**: Command-line JSON processor for pretty printing
+   - Install: `brew install jq` (macOS) or `apt-get install jq` (Linux)
+   - Pipe curl output through jq for formatted JSON: `curl ... | jq '.'`
+
+4. **JSON Formatter**: Validate and format JSON
    - Online tool: https://jsonformatter.org/
 
-4. **Swagger UI**: Interactive API documentation
+5. **Swagger UI**: Interactive API documentation
    - Access at: http://localhost:5125/swagger (when server is running)
 
 ### Learning Resources
