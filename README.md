@@ -71,6 +71,18 @@ The API will start running on `http://localhost:5125`
 > dotnet run
 > ```
 
+> **Note: If Port 5125 is Already in Use**: If you get an error saying the port is already in use, you can kill the existing process:
+> ```bash
+> # Find and kill processes using port 5125
+> lsof -ti:5125 | xargs kill -9
+> 
+> # Alternative: Kill all .NET processes (use with caution)
+> pkill -f "dotnet.*SpartaAcademyAPI"
+> 
+> # Then try running the server again
+> dotnet run
+> ```
+
 ### 2. Test if it's working
 
 Open your browser and go to `http://localhost:5125/swagger` to see the interactive API documentation.
