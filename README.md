@@ -55,6 +55,22 @@ dotnet run
 
 The API will start running on `http://localhost:5125`
 
+> **Note for macOS Users**: If you encounter .NET version issues, you may need to install and use .NET 8 specifically:
+> ```bash
+> # Install .NET 8 via Homebrew
+> brew install dotnet@8
+> 
+> # Set up environment variables for .NET 8
+> export DOTNET_ROOT="/opt/homebrew/opt/dotnet@8/libexec"
+> export PATH="/opt/homebrew/opt/dotnet@8/bin:$PATH"
+> 
+> # Verify .NET 8 is being used
+> dotnet --version  # Should show 8.x.x
+> 
+> # Then run the API server
+> dotnet run
+> ```
+
 ### 2. Test if it's working
 
 Open your browser and go to `http://localhost:5125/swagger` to see the interactive API documentation.
