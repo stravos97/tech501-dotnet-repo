@@ -227,8 +227,8 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
 [
   {
     "id": 1,
-    "firstName": "John",
-    "lastName": "Doe",
+    "firstName": "Michael",
+    "lastName": "Johnson",
     "university": "University of Technology",
     "degree": "BSc Computer Science",
     "course": "C# Development",
@@ -254,8 +254,8 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
 # Response
 {
   "id": 1,
-  "firstName": "John",
-  "lastName": "Doe",
+  "firstName": "Michael",
+  "lastName": "Johnson",
   "university": "University of Technology",
   "degree": "BSc Computer Science",
   "course": "C# Development",
@@ -291,8 +291,8 @@ curl -X POST http://localhost:5125/api/Spartans \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
-    "firstName": "Jane",
-    "lastName": "Smith",
+    "firstName": "Jennifer",
+    "lastName": "Williams",
     "university": "Tech University",
     "degree": "MSc Software Engineering",
     "course": {
@@ -308,8 +308,8 @@ curl -X POST http://localhost:5125/api/Spartans \
 # Response (201 Created)
 {
   "id": 34,
-  "firstName": "Jane",
-  "lastName": "Smith",
+  "firstName": "Jennifer",
+  "lastName": "Williams",
   "university": "Tech University",
   "degree": "MSc Software Engineering",
   "course": "Java Development",
@@ -336,8 +336,8 @@ curl -X PUT http://localhost:5125/api/Spartans/34 \
   -H "Content-Type: application/json" \
   -d '{
     "id": 34,
-    "firstName": "Jane",
-    "lastName": "Smith",
+    "firstName": "Jennifer",
+    "lastName": "Williams",
     "university": "Tech University",
     "degree": "MSc Software Engineering",
     "course": {
@@ -407,8 +407,8 @@ erDiagram
 ```json
 {
   "id": 1,
-  "firstName": "John",
-  "lastName": "Doe",
+  "firstName": "Michael",
+  "lastName": "Johnson",
   "university": "University of Technology",
   "degree": "BSc Computer Science",
   "course": {
@@ -445,6 +445,26 @@ erDiagram
 }
 ```
 
+## Field Validation Rules
+
+The API enforces validation rules on input fields. Here are the key constraints you need to know:
+
+### Spartan Fields
+- **FirstName**: Required, minimum 6 characters, maximum 50 characters
+- **LastName**: Required, minimum 6 characters, maximum 50 characters
+- **University**: Optional
+- **Degree**: Optional
+- **Graduated**: Required boolean (true/false)
+
+### Course Fields
+- **Name**: Required
+- **Trainer**: Required
+
+### Stream Fields
+- **Name**: Required
+
+> **Important**: Always use realistic names that meet the minimum length requirements. For example, use "Jennifer" instead of "Jane", or "Alexander" instead of "Alex".
+
 ## Common Use Cases
 
 ### Scenario 1: Register a New Student
@@ -459,8 +479,8 @@ curl -X POST http://localhost:5125/api/Spartans \
   -H "Authorization: Bearer YOUR_TOKEN_HERE" \
   -H "Content-Type: application/json" \
   -d '{
-    "firstName": "Alex",
-    "lastName": "Brown",
+    "firstName": "Alexander",
+    "lastName": "Anderson",
     "university": "City University",
     "degree": "BSc Computer Science",
     "course": {
@@ -486,8 +506,8 @@ curl -X PUT http://localhost:5125/api/Spartans/1 \
   -H "Content-Type: application/json" \
   -d '{
     "id": 1,
-    "firstName": "John",
-    "lastName": "Doe",
+    "firstName": "Michael",
+    "lastName": "Johnson",
     "university": "University of Technology",
     "degree": "BSc Computer Science",
     "course": {
@@ -538,8 +558,8 @@ curl -H "Authorization: Bearer YOUR_TOKEN_HERE" http://localhost:5125/api/Sparta
 curl -X POST http://localhost:5125/api/Spartans \
   -H "Content-Type: application/json" \
   -d '{
-    "firstName": "John",
-    "lastName": "Doe",
+    "firstName": "Michael",
+    "lastName": "Johnson",
     "course": {
       "name": "C# Development",
       "trainer": "Alice Johnson",
@@ -584,6 +604,45 @@ dotnet run
 - Missing commas
 - Unclosed brackets
 - Incorrect quotes
+
+#### 6. Field Validation Errors (400 Bad Request with validation details)
+```json
+{
+  "errors": {
+    "FirstName": ["The field FirstName must be a string with a minimum length of 6 and a maximum length of 50."],
+    "LastName": ["The field LastName must be a string with a minimum length of 6 and a maximum length of 50."]
+  },
+  "type": "https://tools.ietf.org/html/rfc9110#section-15.5.1",
+  "title": "One or more validation errors occurred.",
+  "status": 400,
+  "traceId": "00-1c09e089cbd0fa5110c515003bfb2549-8ee4efb4de05e50c-00"
+}
+```
+**Solution**: These errors are actually very helpful! They tell you exactly which fields are invalid and what the requirements are. Check the [Field Validation Rules](#field-validation-rules) section for all constraints.
+
+**Example - This will fail:**
+```bash
+curl -X POST http://localhost:5125/api/Spartans \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Jane",     # Too short! Needs 6+ characters
+    "lastName": "Doe",       # Too short! Needs 6+ characters
+    "course": { ... }
+  }'
+```
+
+**Example - This will work:**
+```bash
+curl -X POST http://localhost:5125/api/Spartans \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Jennifer", # 8 characters ✓
+    "lastName": "Williams",  # 8 characters ✓
+    "course": { ... }
+  }'
+```
 
 ### HTTP Status Codes Explained
 
