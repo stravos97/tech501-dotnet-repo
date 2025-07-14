@@ -1,179 +1,620 @@
-# Sparta Global ASP.NET API
+# Sparta Academy API - Beginner's Guide
 
-You can view the swagger documentation for the API [here](https://spartaacademyapi20240530152521.azurewebsites.net/)
+A comprehensive REST API for managing Spartans, Courses, and Streams at Sparta Academy. This guide will help you understand and use the API, even if you're new to APIs and web development.
 
-If you intend to run a local image or container, follow [these steps](#Containersing-the api)
+## Table of Contents
 
-The **SpartaAcademyAPI** allows you to:
+1. [What is this API?](#what-is-this-api)
+2. [Prerequisites](#prerequisites)
+3. [Getting Started](#getting-started)
+4. [Architecture Overview](#architecture-overview)
+5. [Authentication with JWT](#authentication-with-jwt)
+6. [API Endpoints](#api-endpoints)
+   - [GET Requests](#get-requests)
+   - [POST Requests](#post-requests)
+   - [PUT Requests](#put-requests)
+   - [DELETE Requests](#delete-requests)
+7. [Data Models](#data-models)
+8. [Common Use Cases](#common-use-cases)
+9. [Troubleshooting](#troubleshooting)
+10. [Additional Resources](#additional-resources)
 
-* **View all courses**: `/api/courses` (GET)
-* **View a specific course**: `/api/courses/{courseId}` (GET)
-* **View all Spartans**: `/api/spartans` (GET)
-* **View a specific Spartan**: `/api/spartans/{spartanId}` (GET)
-* **Create a new Spartan**: `/api/spartans` (POST)
-* **Update an existing Spartan**: `/api/spartans/{spartanId}` (PUT)
-* **Delete an existing Spartan**: `/api/spartans/{spartanId}` (DELETE)
+## What is this API?
 
-Details about the end points should appear in the swagger documentation
+An **API (Application Programming Interface)** is like a waiter in a restaurant - it takes your request, communicates with the kitchen (database), and brings back the response. 
 
-## Obtain Bearer Token
+The Sparta Academy API helps you:
+- **Manage Spartans**: Create, view, update, and delete student records
+- **Manage Courses**: Handle course information and assignments
+- **Manage Streams**: Organize different learning paths (like "C# Development", "Java Development")
 
-Ensure that the Bearer token is included in the Authorisation header for endpoints that require authentication. 
+Think of it as a digital filing system where you can store and retrieve information about students and their courses.
 
-To retrieve a bearer token, make a POST request to the end point `/api/auth/login` with the following request body:
+## Prerequisites
 
+Before you start, you'll need:
+- **Basic understanding of HTTP** (GET, POST, PUT, DELETE)
+- **Command line tool** like Terminal (Mac/Linux) or Command Prompt (Windows)
+- **curl** (usually pre-installed) or **Postman** for testing API calls
+- **.NET 8 SDK** installed on your machine
+
+## Getting Started
+
+### 1. Start the API Server
+
+```bash
+# Navigate to the project directory
+cd SpartaAcademyAPI
+
+# Build the project
+dotnet build
+
+# Run the API server
+dotnet run
+```
+
+The API will start running on `http://localhost:5125`
+
+### 2. Test if it's working
+
+Open your browser and go to `http://localhost:5125/swagger` to see the interactive API documentation.
+
+## Architecture Overview
+
+Understanding how the API is structured will help you use it more effectively:
+
+```mermaid
+graph TB
+    Client[Client Application] --> Controller[Controllers Layer]
+    Controller --> Service[Service Layer]
+    Service --> Repository[Repository Layer]
+    Repository --> Database[(In-Memory Database)]
+    
+    Controller --> JWT[JWT Authentication]
+    Controller --> AutoMapper[AutoMapper]
+    Controller --> DTO[Data Transfer Objects]
+    
+    subgraph "API Structure"
+        Controller
+        Service
+        Repository
+    end
+    
+    subgraph "Supporting Components"
+        JWT
+        AutoMapper
+        DTO
+    end
+```
+
+**What each layer does:**
+- **Controllers**: Handle HTTP requests and responses
+- **Service Layer**: Contains business logic
+- **Repository Layer**: Manages data access
+- **Database**: Stores all the data (uses in-memory database for this demo)
+
+## Authentication with JWT
+
+### What is JWT?
+JWT (JSON Web Token) is like a digital ID card that proves you're allowed to access the API. Think of it as a temporary pass that expires after some time.
+
+### Authentication Flow
+
+```mermaid
+sequenceDiagram
+    participant Client
+    participant API
+    participant AuthService
+    participant Database
+    
+    Client->>API: POST /Auth/login (username, password)
+    API->>AuthService: Validate credentials
+    AuthService->>AuthService: Check username="sparta", password="global"
+    AuthService->>API: Credentials valid
+    API->>Client: Return JWT token
+    
+    Note over Client: Store token for future requests
+    
+    Client->>API: GET /api/Spartans (with Bearer token)
+    API->>API: Validate JWT token
+    API->>Database: Fetch Spartans data
+    Database->>API: Return data
+    API->>Client: Return Spartans list
+```
+
+### Step-by-Step: Getting Your JWT Token
+
+#### Step 1: Request a Token
+```bash
+curl -X POST http://localhost:5125/Auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "sparta", "password": "global"}'
+```
+
+#### Step 2: You'll get a response like this:
 ```json
 {
-  "username": "sparta",
-  "password": "global"
+  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoic3BhcnRhIiwiZXhwIjoxNjk5NTI1MjAwLCJpc3MiOiJZb3VySXNzdWVyIiwiYXVkIjoiWW91cklzc3VlciJ9.mj4C_UQoobshZUWa1tWLLl6OMSRMzuhifG6pK8A1K0A"
 }
 ```
 
-Status code response should be **200**
+#### Step 3: Copy the token (the long string) and use it in subsequent requests:
+```bash
+# Use the token in the Authorization header
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" http://localhost:5125/api/Spartans
+```
 
-Example response body:
+> **Important**: Replace `YOUR_TOKEN_HERE` with the actual token you received!
 
-```json
+## API Endpoints
+
+### Request Flow Overview
+
+```mermaid
+graph LR
+    A[Client Request] --> B{Authentication Required?}
+    B -->|Yes| C[Check JWT Token]
+    B -->|No| D[Process Request]
+    C -->|Valid| D
+    C -->|Invalid| E[Return 401 Unauthorized]
+    D --> F[Execute Business Logic]
+    F --> G[Return Response]
+```
+
+### GET Requests
+GET requests are used to **retrieve** information. Think of them as "asking for" data.
+
+#### Get All Spartans
+```bash
+# Request
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans
+
+# Response
+[
+  {
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "university": "University of Technology",
+    "degree": "BSc Computer Science",
+    "course": "C# Development",
+    "stream": "Software Development",
+    "graduated": false,
+    "links": [
+      {
+        "href": "/api/Spartans/1",
+        "rel": "self",
+        "method": "GET"
+      }
+    ]
+  }
+]
+```
+
+#### Get Specific Spartan
+```bash
+# Request
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans/1
+
+# Response
 {
-  "token": "eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJodHRwOi8vc2NoZW1hcy54bWxzb2FwLm9yZy93cy8yMDA1LzA1L2lkZW50aXR5L2NsYWltcy9uYW1lIjoic3BhcnRhIiwiZXhwIjoxNzE5MzEzNTg4LCJpc3MiOiJZb3VySXNzdWVyIiwiYXVkIjoiWW91cklzc3VlciJ9.j3nJgk7KqmdASKPaUxu7AEo7RtlRj-lZf5NJKrTTLyw"
+  "id": 1,
+  "firstName": "John",
+  "lastName": "Doe",
+  "university": "University of Technology",
+  "degree": "BSc Computer Science",
+  "course": "C# Development",
+  "stream": "Software Development",
+  "graduated": false
 }
 ```
 
-Example response headers:
+#### Get All Courses
+```bash
+# Request
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Courses
 
+# Response
+[
+  {
+    "id": 1,
+    "name": "C# Development",
+    "trainer": "Alice Johnson",
+    "stream": "Software Development"
+  }
+]
 ```
-content-length: 261 
-content-type: application/json; charset=utf-8 
-date: Tue,25 Jun 2024 10:36:27 GMT 
-server: Kestrel 
+
+### POST Requests
+POST requests are used to **create** new resources. Think of them as "adding" data.
+
+#### Create a New Spartan
+```bash
+# Request
+curl -X POST http://localhost:5125/api/Spartans \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "university": "Tech University",
+    "degree": "MSc Software Engineering",
+    "course": {
+      "name": "Java Development",
+      "trainer": "Sarah Johnson",
+      "stream": {
+        "name": "Backend Development"
+      }
+    },
+    "graduated": false
+  }'
+
+# Response (201 Created)
+{
+  "id": 34,
+  "firstName": "Jane",
+  "lastName": "Smith",
+  "university": "Tech University",
+  "degree": "MSc Software Engineering",
+  "course": "Java Development",
+  "stream": "Backend Development",
+  "graduated": false,
+  "links": [
+    {
+      "href": "/api/Spartans/34",
+      "rel": "self",
+      "method": "GET"
+    }
+  ]
+}
 ```
 
+### PUT Requests
+PUT requests are used to **update** existing resources. Think of them as "editing" data.
 
+#### Update an Existing Spartan
+```bash
+# Request
+curl -X PUT http://localhost:5125/api/Spartans/34 \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 34,
+    "firstName": "Jane",
+    "lastName": "Smith",
+    "university": "Tech University",
+    "degree": "MSc Software Engineering",
+    "course": {
+      "name": "Java Development",
+      "trainer": "Sarah Johnson",
+      "stream": {
+        "name": "Backend Development"
+      }
+    },
+    "graduated": true
+  }'
 
-## Containerising the API
+# Response (204 No Content)
+# Success! No response body, but the Spartan has been updated
+```
 
+### DELETE Requests
+DELETE requests are used to **remove** resources. Think of them as "deleting" data.
 
+#### Delete a Spartan
+```bash
+# Request
+curl -X DELETE http://localhost:5125/api/Spartans/34 \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE"
 
-Alternatively, you should be able to containerize the app and run it locally using Docker. To do so, follow the steps below:
+# Response (204 No Content)
+# Success! The Spartan has been deleted
+```
 
+## Data Models
 
+Understanding the data structure helps you create proper requests:
 
-* Download [Docker Desktop](https://www.docker.com/products/docker-desktop/), create an account, and complete the installation steps.
-  
-  
+### Entity Relationships
 
-* Download the `SpartaAcademyApp.zip` file.
-  
-  
+```mermaid
+erDiagram
+    Spartan ||--|| Course : "belongs to"
+    Course ||--|| Stream : "belongs to"
+    
+    Spartan {
+        int Id
+        string FirstName
+        string LastName
+        string University
+        string Degree
+        bool Graduated
+        int CourseId
+    }
+    
+    Course {
+        int Id
+        string Name
+        string Trainer
+        int StreamId
+    }
+    
+    Stream {
+        int Id
+        string Name
+    }
+```
 
-* Open your command-line interface (CLI) and navigate to the **SpartaAcademyAPI** directory.
-  
-  
-  
-  > **Note:** The Dockerfile is located in this directory. Review the Dockerfile to understand the  actions performed when executing the next command.
-  
-  
+### JSON Examples
 
-* Execute the following command in the CLI to build the Docker image tagged as `spartaacademyapi`:
-  
-  
+#### Spartan Object
+```json
+{
+  "id": 1,
+  "firstName": "John",
+  "lastName": "Doe",
+  "university": "University of Technology",
+  "degree": "BSc Computer Science",
+  "course": {
+    "id": 1,
+    "name": "C# Development",
+    "trainer": "Alice Johnson",
+    "stream": {
+      "id": 1,
+      "name": "Software Development"
+    }
+  },
+  "graduated": false
+}
+```
 
-```powershell
+#### Course Object
+```json
+{
+  "id": 1,
+  "name": "C# Development",
+  "trainer": "Alice Johnson",
+  "stream": {
+    "id": 1,
+    "name": "Software Development"
+  }
+}
+```
+
+#### Stream Object
+```json
+{
+  "id": 1,
+  "name": "Software Development"
+}
+```
+
+## Common Use Cases
+
+### Scenario 1: Register a New Student
+```bash
+# 1. Get authentication token
+curl -X POST http://localhost:5125/Auth/login \
+  -H "Content-Type: application/json" \
+  -d '{"username": "sparta", "password": "global"}'
+
+# 2. Create the new student
+curl -X POST http://localhost:5125/api/Spartans \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "Alex",
+    "lastName": "Brown",
+    "university": "City University",
+    "degree": "BSc Computer Science",
+    "course": {
+      "name": "Python Development",
+      "trainer": "Mike Wilson",
+      "stream": {
+        "name": "Data Science"
+      }
+    },
+    "graduated": false
+  }'
+```
+
+### Scenario 2: Mark a Student as Graduated
+```bash
+# 1. Get the student's current information
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans/1
+
+# 2. Update the student's graduation status
+curl -X PUT http://localhost:5125/api/Spartans/1 \
+  -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  -H "Content-Type: application/json" \
+  -d '{
+    "id": 1,
+    "firstName": "John",
+    "lastName": "Doe",
+    "university": "University of Technology",
+    "degree": "BSc Computer Science",
+    "course": {
+      "name": "C# Development",
+      "trainer": "Alice Johnson",
+      "stream": {
+        "name": "Software Development"
+      }
+    },
+    "graduated": true
+  }'
+```
+
+### Scenario 3: Get All Students in a Specific Course
+```bash
+# 1. Get all Spartans
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans
+
+# 2. Filter results on client side or use the data to find specific course students
+```
+
+## Troubleshooting
+
+### Common Issues and Solutions
+
+#### 1. 401 Unauthorized Error
+```json
+{
+  "error": "Unauthorized"
+}
+```
+**Solution**: You need to include a valid JWT token in your request.
+```bash
+# Make sure you include the Authorization header
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" http://localhost:5125/api/Spartans
+```
+
+#### 2. 400 Bad Request Error
+```json
+{
+  "error": "Bad Request"
+}
+```
+**Solution**: Check your JSON syntax and required fields.
+```bash
+# Make sure your JSON is valid
+curl -X POST http://localhost:5125/api/Spartans \
+  -H "Content-Type: application/json" \
+  -d '{
+    "firstName": "John",
+    "lastName": "Doe",
+    "course": {
+      "name": "C# Development",
+      "trainer": "Alice Johnson",
+      "stream": {
+        "name": "Software Development"
+      }
+    },
+    "graduated": false
+  }'
+```
+
+#### 3. 404 Not Found Error
+```json
+{
+  "error": "Not Found"
+}
+```
+**Solution**: The resource you're looking for doesn't exist.
+```bash
+# Check if the ID exists
+curl -H "Authorization: Bearer YOUR_TOKEN_HERE" \
+  http://localhost:5125/api/Spartans/999  # This ID might not exist
+```
+
+#### 4. Server Connection Error
+```
+curl: (7) Failed to connect to localhost port 5125
+```
+**Solution**: Make sure the API server is running.
+```bash
+cd SpartaAcademyAPI
+dotnet run
+```
+
+#### 5. JSON Parsing Error
+```json
+{
+  "error": "Invalid JSON format"
+}
+```
+**Solution**: Validate your JSON using a JSON validator or check for:
+- Missing commas
+- Unclosed brackets
+- Incorrect quotes
+
+### HTTP Status Codes Explained
+
+- **200 OK**: Request successful
+- **201 Created**: Resource created successfully
+- **204 No Content**: Request successful, no data returned
+- **400 Bad Request**: Invalid request format
+- **401 Unauthorized**: Authentication required
+- **404 Not Found**: Resource not found
+- **500 Internal Server Error**: Server error
+
+## Additional Resources
+
+### Useful Tools
+
+1. **Postman**: GUI tool for testing APIs
+   - Download: https://www.postman.com/downloads/
+   - Import the API collection for easy testing
+
+2. **curl**: Command-line tool for HTTP requests
+   - Pre-installed on most systems
+   - Great for automation and scripting
+
+3. **JSON Formatter**: Validate and format JSON
+   - Online tool: https://jsonformatter.org/
+
+4. **Swagger UI**: Interactive API documentation
+   - Access at: http://localhost:5125/swagger (when server is running)
+
+### Learning Resources
+
+- **REST API Basics**: https://restfulapi.net/
+- **HTTP Methods**: https://developer.mozilla.org/en-US/docs/Web/HTTP/Methods
+- **JSON Format**: https://www.json.org/json-en.html
+- **JWT Introduction**: https://jwt.io/introduction/
+
+### Contact and Support
+
+If you encounter issues or have questions:
+1. Check the [Troubleshooting](#troubleshooting) section
+2. Review the API documentation at `/swagger`
+3. Contact the development team
+
+---
+
+## Docker Deployment (Optional)
+
+### Containerising the API
+
+You can also run the API using Docker. To do so, follow these steps:
+
+1. **Download Docker Desktop**: https://www.docker.com/products/docker-desktop/
+
+2. **Build the Docker image**:
+```bash
 docker build -t spartaacademyapi .
 ```
 
-> 
-> 
-> This command reads instructions from the Dockerfile and builds an image for the SpartaAcademyAPI application.
-
-
-
-* Start a Docker container with the built image using the following command:
-  
-  
-
-```cmd
+3. **Run the container**:
+```bash
 docker run -d -p 8080:8080 -p 8081:8081 spartaacademyapi
 ```
 
+4. **Access the API**: Open http://localhost:8080/
 
+### Stopping the Container
 
-> This command runs the container in detached mode (`-d`), mapping port 8080 on your local machine to port 8080 on the container, and port 8081 on your local machine to port 8081 on the container.
-
-
-
-* Open your web browser and go to [http://localhost:8080/](http://localhost:8080/) to access the locally hosted SpartaAcademyAPI.
-  
-  
-
-* If you encounter any issues during setup:
-  
-  * Open Docker Desktop.
-  * Navigate to the Builds section in the left-side panel.
-  * Open the build for SpartaAcademyAPI.
-  * Review any error logs displayed.
-  * Report any encountered errors to your Academy Trainer for assistance.
-    
-    
-
-### Stopping the container
-
-To stop a Docker container that is running an image, you can follow these steps:
-
-1. **Identify the Container ID or Name**: First, you need to know the ID or the name of the container running your image. You can find this by running:
-   
-   
-
-```cmd
+1. **List running containers**:
+```bash
 docker ps
 ```
 
-> This command lists all running containers along with their IDs, names, and other details.
-
-
-
-2. **Stop the Container**: Once you have identified the container ID or name, use the following command to stop it:
-   
-   
-
-```cmd
+2. **Stop the container**:
+```bash
 docker stop <container_id_or_name>
 ```
 
-
-
-   Replace `<container_id_or_name>` with the actual ID or name of your container.
-
-
-
-   For example:
-
-
-
-```cmd
-docker stop abcdef123456
+3. **Remove the container** (optional):
+```bash
+docker rm <container_id_or_name>
 ```
 
+---
 
+**Happy coding! 🚀**
 
-   Or if your container has a name:
-
-
-
-```cmd
-docker stop my_container
-```
-
-
-
-   This command sends a stop signal to the container, causing it to gracefully shut down.
-
-
-
-3. **Verify**: To ensure the container has stopped, you can run `docker ps` again. If your container no longer appears in the list of running containers, it has successfully stopped.
-   
-   
-
-If you want to remove the stopped container (cleanup), you can use `docker rm <container_id_or_name>`. This removes the container permanently, freeing up resources.
-
-Stopping a Docker container halts its execution but preserves its state and configuration. If you need to start it again later, you can use `docker start <container_id_or_name>` to resume it.
+Remember: APIs are just tools to help different applications communicate. Don't be afraid to experiment and learn!

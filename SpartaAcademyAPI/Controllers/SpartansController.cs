@@ -63,7 +63,7 @@ namespace SpartaAcademyAPI.Controllers
             return await _spartanService.CreateAsync(spartan) ?
 
                  CreatedAtAction(
-                    "GetSupplier",
+                    "GetSpartan",
                     new { id = spartan.Id },
                     _mapper.Map<SpartanDTO>(spartan)) :
 
