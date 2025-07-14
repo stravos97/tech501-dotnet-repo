@@ -351,3 +351,5 @@ MigrationBackup/
 
 # Claude files
 .claude/
+.mcp.json
+CLAUDE.md
